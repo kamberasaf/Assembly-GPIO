@@ -1,0 +1,33 @@
+#include <msp430g2553.h>
+;-------------------------------------------------------------------------------
+           ORG    0C000h
+           PUBLIC mainloop
+           EXTERN task1,task2,task3,task4
+;-------------------------------------------------------------------------------
+           RSEG   CSTACK
+           RSEG   CODE
+RESET      mov.w  #SFE(CSTACK),SP
+StopWDT    mov.w  #WDTPW+WDTHOLD,&WDTCTL
+
+SetupP1    bic.b  #0x0F,&P1DIR  ; p1.0-p1.3 input (SWITCHES).
+SetupP2    bis.b  #0xFF,&P2DIR  ; P2.0-P2.7 output (LEDS).
+           bic.b  #0xC0,&P2SEL  ; for P2.6,P2.7 to be GPIO.
+
+mainloop   cmp.b  #0x01, &P1IN  ; check if switch states is '1'.
+           jeq    task1           
+           cmp.b  #0x02, &P1IN  ; check if switch states is '1'.
+           jeq    task2          
+           cmp.b  #0x04, &P1IN  ; check if switch states is '4'.
+           jeq    task3
+           cmp.b  #0x05, &P1IN
+           jeq    task4
+           bic.b  #0xff, &P2OUT ; turn off LEDS.
+           jmp    mainloop          
+           nop
+           
+;------------------------------------------------------------------------------
+           COMMON INTVEC
+;------------------------------------------------------------------------------
+           ORG RESET_VECTOR
+           DW RESET
+           END
