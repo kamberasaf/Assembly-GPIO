@@ -1,0 +1,135 @@
+;*****************************************************************************
+; File: main_lab3.s43 - Main Program for GPIO, Keypad and LCD Lab
+; Authors: Asaf Kamber, Aviv Primor
+; Course: Introduction to Computers - Lab 3
+; Description: Main program for controlling LEDs through GPIO ports based on
+;              switch inputs. Implements various display patterns using the IDs.
+;*****************************************************************************
+#include <msp430g2553.h>     ; Include MSP430G2553 definitions
+
+;-------------------------------------------------------------------------------
+; Macro Definitions
+;-------------------------------------------------------------------------------
+Delay         MACRO  time,mul       ; Delay macro that creates a time delay
+              LOCAL  L1,L2          ; Local labels for the macro
+              MOV.W  mul,R4         ; Initialize outer loop counter
+L1            MOV.W  time,R5        ; Initialize inner loop counter
+L2            DEC.W  R5             ; Decrement inner counter
+              JNZ    L2             ; Jump to L2 if inner counter not zero
+              DEC.W  R4             ; Decrement outer counter
+              JNZ    L1             ; Jump to L1 if outer counter not zero
+              ENDM                  ; End of macro definition
+
+;-------------------------------------------------------------------------------
+; Data Section - Memory allocation for variables
+;-------------------------------------------------------------------------------
+              ORG    0C000h         ; Start of data memory section
+id1           DB     0,8,4,8,8,9,7,3  ; Aviv's ID (first ID)
+id2           DB     1,3,3,9,0,4,2,9  ; Asaf's ID (second ID)
+id1_id2       DB     0,8,4,8,8,9,7,3,1,3,3,9,0,4,2,9  ; Combined IDs
+
+;-------------------------------------------------------------------------------
+; External and Public Declarations
+;-------------------------------------------------------------------------------
+              EXTERN mainloop       ; External reference to mainloop (main program loop)
+              PUBLIC task1,task2,task3,task4  ; Make tasks visible to other modules
+              
+;-------------------------------------------------------------------------------
+; Stack Configuration
+;-------------------------------------------------------------------------------
+              RSEG   CSTACK         ; Segment for C stack
+              RSEG   CODE           ; Code segment begins here
+
+;-------------------------------------------------------------------------------
+; Task 1: Increment Pattern
+; 
+; Continuously increments a counter and displays the value on the LEDs
+; when switch 1 (P1.0) is pressed.
+;-------------------------------------------------------------------------------
+task1         CLR    R14            ; Clear counter register
+next_num      MOV.B  R14,&P2OUT     ; Output counter value to LEDs (P2 port)
+              CMP.B  #0x01,&P1IN    ; Check if switch 1 is pressed (P1.0 = 1)
+              JNE    mainloop       ; If not pressed, return to main program loop
+              Delay  #58250,#6      ; Delay for approximately 1 second
+              INC.B  R14            ; Increment counter
+              JMP    next_num       ; Continue incrementing pattern
+              NOP                   ; No operation (for alignment)
+
+;-------------------------------------------------------------------------------
+; Task 2: Decrement Pattern
+; 
+; Continuously decrements a counter and displays the value on the LEDs
+; when switch 2 (P1.1) is pressed.
+;-------------------------------------------------------------------------------
+task2         CLR    R14            ; Clear register
+              MOV.B  0xff,R14       ; Initialize register with all bits set (255)
+prev_num      MOV.B  R14,&P2OUT     ; Output counter value to LEDs (P2 port)
+              CMP.B  #0x02,&P1IN    ; Check if switch 2 is pressed (P1.1 = 1)
+              JNE    mainloop       ; If not pressed, return to main program loop
+              Delay  #58250,#6      ; Delay for approximately 1 second
+              DEC    R14            ; Decrement counter
+              JMP    prev_num       ; Continue decrementing pattern
+              NOP                   ; No operation (for alignment)
+
+;-------------------------------------------------------------------------------
+; Task 3: Alternating ID Digits
+; 
+; Alternately displays digits from the two ID arrays when switch 3 (P1.2) is pressed.
+;-------------------------------------------------------------------------------
+task3         MOV     #id1,R14      ; Initialize pointer to first ID array
+              MOV     #id2,R12      ; Initialize pointer to second ID array
+              MOV.B   #8,R13        ; Set counter to ID length (8 digits)
+task3loop     MOV.B   @R14,R11      ; Load digit from first ID (Aviv)
+              MOV.B   @R12,R10      ; Load digit from second ID (Asaf)
+              INC     R14           ; Move to next digit in first ID
+              INC     R12           ; Move to next digit in second ID
+              cmp.b   #0x04, &P1IN  ; Check if switch 3 is pressed (P1.2 = 1)
+              JNE     mainloop      ; If not pressed, return to main program loop
+              
+              MOV.B   R11,&P2OUT    ; Display digit from first ID on LEDs
+              Delay   #58250,#6     ; Delay for approximately 1 second
+              MOV.B   R10,&P2OUT    ; Display digit from second ID on LEDs
+              Delay   #58250,#6     ; Delay for approximately 1 second
+              
+              DEC     R13           ; Decrement digit counter
+              JZ      task3         ; If reached end of ID, restart
+              JMP     task3loop     ; Continue alternating pattern
+              NOP                   ; No operation (for alignment)
+
+;-------------------------------------------------------------------------------
+; Task 4: Mirrored Display
+; 
+; Displays digits from both ends of the combined ID array moving toward the center
+; when switch 4 (P1.3) is pressed.
+;-------------------------------------------------------------------------------
+task4         MOV     #id1_id2,R10  ; Initialize end pointer (will be moved to end)
+              MOV     #id1_id2,R11  ; Initialize start pointer
+              MOV.B   #7, R7        ; Set iteration counter (7 pairs to display)
+
+; Move end pointer to the end of the array
+gettolast     MOV.B   #15,R6        ; Set counter for array length - 1
+inloop        INC     R10           ; Move end pointer forward
+              DEC     R6            ; Decrement counter
+              JNZ     inloop        ; Continue until end is reached
+
+; Main display loop
+task4loop     MOV.B   @R11,R8       ; Load digit from left (beginning)
+              MOV.B   @R10,R9       ; Load digit from right (end)
+              DEC     R10           ; Move right pointer toward center
+              INC     R11           ; Move left pointer toward center
+              
+              cmp.b   #0x05, &P1IN  ; Check if switch 4 is pressed (P1.3 = 1)
+              JNE     mainloop      ; If not pressed, return to main program loop
+              
+              MOV.B   R9,&P2OUT     ; Display right digit on LEDs
+              Delay   #58250,#6     ; Delay for approximately 1 second
+              MOV.B   R8,&P2OUT     ; Display left digit on LEDs
+              Delay   #58250,#6     ; Delay for approximately 1 second
+              
+              DEC     R7            ; Decrement iteration counter
+              JZ      task4         ; If reached end, restart
+              JMP     task4loop     ; Continue mirrored pattern
+              NOP                   ; No operation (for alignment)
+
+;-------------------------------------------------------------------------------              
+              END                   ; End of program
