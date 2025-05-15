@@ -1,0 +1,53 @@
+# IAR Embedded Workbench files
+*.dep
+*.ewd
+*.ewp
+*.ewt
+*.eww
+*.dni
+*.dbgdt
+*.pbi
+*.xcl
+*.pbd
+*.pbi.xcl
+*.__ia
+*.wsdt
+*.wspos
+
+# Build outputs
+Debug/
+Release/
+*.o
+*.obj
+*.out
+*.hex
+*.d43
+*.r43
+*.map
+*.lst
+*.s43_o
+
+# Temporary files
+*.bak
+*.tmp
+*~
+
+# Code Composer Studio files
+.project
+.ccsproject
+.cproject
+.settings/
+.launches/
+Debug_*
+Release_*
+targetConfigs/
+
+# Compiled binaries
+*.elf
+*.bin
+*.a
+
+# OS specific files
+.DS_Store
+Thumbs.db
+desktop.ini
